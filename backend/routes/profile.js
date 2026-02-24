@@ -1,4 +1,8 @@
 // routes/profiles.js
+import { requireAuth, syncUser } from "../middleware/clerkAuth.js";
+import e, { Router } from "express";
+const router = Router();
+
 router.post('/', requireAuth, syncUser, async (req, res) => {
   const existingCount = await Profile.countDocuments({ userId: req.auth.userId });
   
@@ -15,3 +19,5 @@ router.post('/', requireAuth, syncUser, async (req, res) => {
   
   res.json(profile);
 });
+
+export default router;

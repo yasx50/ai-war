@@ -1,4 +1,7 @@
-// models/User.js
+import mongoose from "mongoose";
+
+const { Schema } = mongoose;
+
 const UserSchema = new Schema({
   clerkId: { type: String, required: true, unique: true },
   email: String,
@@ -6,3 +9,5 @@ const UserSchema = new Schema({
   tokenLimit: { type: Number, default: 1000 },
   createdAt: { type: Date, default: Date.now }
 });
+
+export default mongoose.model("User", UserSchema);

@@ -1,10 +1,13 @@
-import express from 'express';
 import dotenv from 'dotenv';
+dotenv.config();
+import express from 'express';
 import cors from 'cors';
-import connectDB from './config/db.js';
+import connectDB from './config/db.connnection.js';
+import mongoose from 'mongoose';
+import profileRoutes from './routes/profile.js';
+import debateRoutes from './routes/debate.js';
 
 // Load env variables FIRST before anything else
-dotenv.config();
 
 const app = express();
 
@@ -29,15 +32,15 @@ app.get('/api/health', (req, res) => {
 });
 
 // Routes (add as you build them)
-// app.use('/api/profiles', profileRoutes);
-// app.use('/api/debate', debateRoutes);
+app.use('/api/profiles', profileRoutes);
+app.use('/api/debate', debateRoutes);
 // app.use('/api/user', userRoutes);
 
 // 404 handler
-app.use('*', (req, res) => {
+ // 404 handler
+app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.originalUrl} not found` });
 });
-
 // Global error handler
 app.use((err, req, res, next) => {
   console.error('💥 Error:', err.message);
@@ -49,4 +52,5 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log("groq api key", process.env.GROQ_API_KEY);
 });
