@@ -90,13 +90,14 @@ const DebateArena = ({ userProfiles = [] }) => {
   }, [messages]);
 
   useEffect(() => {
-    if (isDebating && !loading && messages.length > 0) {
-      const autoGenerateTimeout = setTimeout(() => {
+    if (isDebating && !loading && messages.length >= 2) {
+      // Only auto-generate if we have initial messages and aren't already loading
+      const timer = setTimeout(() => {
         continueDebate();
-      }, 1000);
-      return () => clearTimeout(autoGenerateTimeout);
+      }, 1500);
+      return () => clearTimeout(timer);
     }
-  }, [isDebating, loading, messages]);
+  }, [isDebating, loading, messages.length]);
 
   const profile1 = allProfiles.find((p) => p._id === profile1Id);
   const profile2 = allProfiles.find((p) => p._id === profile2Id);
@@ -160,14 +161,17 @@ const DebateArena = ({ userProfiles = [] }) => {
       const data = res.data;
       console.log('Continue response received:', data);
       
-      const newMessages = [
-        { id: Date.now() + Math.random(), role: 'profile1', content: data.profile1Response, tokens: data.tokensUsed?.profile1 },
-        { id: Date.now() + Math.random() + 1, role: 'profile2', content: data.profile2Response, tokens: data.tokensUsed?.profile2 },
-      ];
+      // Handle single response format from /continue
+      const newMessage = {
+        id: Date.now() + Math.random(),
+        role: data.isProfile1Turn ? 'profile1' : 'profile2',
+        content: data.isProfile1Turn ? data.profile1Response : data.profile2Response,
+        tokens: data.isProfile1Turn ? data.tokensUsed.profile1 : data.tokensUsed.profile2,
+      };
       
-      console.log('Adding new messages:', newMessages);
+      console.log('Adding new message:', newMessage);
       setMessages((prev) => {
-        const updated = [...prev, ...newMessages];
+        const updated = [...prev, newMessage];
         console.log('Updated messages state:', updated);
         return updated;
       });

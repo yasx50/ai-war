@@ -12,7 +12,7 @@ export const useProfiles = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get('/profiles');
+      const res = await api.get('/customprofiles');
       setProfiles(res.data);
     } catch (err) {
       setError(err.message);
@@ -32,7 +32,7 @@ export const useProfiles = () => {
       return null;
     }
     try {
-      const res = await api.post('/profiles', profileData);
+      const res = await api.post('/customprofiles', profileData);
       setProfiles((prev) => [...prev, res.data]);
       toast.success(`Profile "${res.data.name}" created!`);
       return res.data;
@@ -44,7 +44,7 @@ export const useProfiles = () => {
 
   const updateProfile = async (id, profileData) => {
     try {
-      const res = await api.put(`/profiles/${id}`, profileData);
+      const res = await api.put(`/customprofiles/${id}`, profileData);
       setProfiles((prev) =>
         prev.map((p) => (p._id === id ? res.data : p))
       );
@@ -58,7 +58,7 @@ export const useProfiles = () => {
 
   const deleteProfile = async (id) => {
     try {
-      await api.delete(`/profiles/${id}`);
+      await api.delete(`/customprofiles/${id}`);
       setProfiles((prev) => prev.filter((p) => p._id !== id));
       toast.success('Profile deleted');
     } catch (err) {

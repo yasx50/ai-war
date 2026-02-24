@@ -6,7 +6,7 @@ import connectDB from './config/db.connnection.js';
 import mongoose from 'mongoose';
 import profileRoutes from './routes/profile.js';
 import debateRoutes from './routes/debate.js';
-
+import customprofile from './routes/createprofile.js';
 // Load env variables FIRST before anything else
 
 const app = express();
@@ -34,7 +34,7 @@ app.get('/api/health', (req, res) => {
 // Routes (add as you build them)
 app.use('/api/profiles', profileRoutes);
 app.use('/api/debate', debateRoutes);
-// app.use('/api/user', userRoutes);
+app.use('/api/customprofiles', customprofile);
 
 // 404 handler
  // 404 handler

@@ -4,6 +4,9 @@ const { Schema } = mongoose;
 
 const UserSchema = new Schema({
   clerkId: { type: String, required: true, unique: true },
+
+
+  profiles: { type: Number, required: true, default: 0 },
   email: String,
   tokensUsed: { type: Number, default: 0 },
   tokenLimit: { type: Number, default: 1000 },

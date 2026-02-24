@@ -16,10 +16,11 @@ const logger = {
   },
 };
 
-// Helper to clean response text
-function cleanResponse(text) {
+// Helper to clean response text and extract just dialogue
+function extractDialogue(text) {
   if (!text) return "";
-  return text
+  
+  let cleaned = text
     .replace(/\*\*/g, "")           // Remove bold markers
     .replace(/\*/g, "")              // Remove asterisks
     .replace(/#+\s/g, "")            // Remove markdown headers
@@ -29,6 +30,34 @@ function cleanResponse(text) {
     .replace(/[""]/g, '"')           // Fix smart quotes
     .replace(/['']/g, "'")           // Fix smart apostrophes
     .trim();
+
+  // Remove meta-commentary patterns
+  const metaPatterns = [
+    /.*?let's (continue|generate|proceed).*?[:.]/gi,
+    /.*?as.*?(turn|response|due).*?[:.]/gi,
+    /.*?however.*?for.*?(sake|sake of|continuing).*?[:.]/gi,
+    /.*?Here's the (correct|proper).*?[:.]/gi,
+    /.*?To (continue|proceed|respond).*?[:.]/gi,
+  ];
+
+  for (const pattern of metaPatterns) {
+    cleaned = cleaned.replace(pattern, "");
+  }
+
+  // Take only the first coherent sentence/statement, removing trailing meta-commentary
+  const sentences = cleaned.split(/[.!?]+/).filter(s => s.trim().length > 3);
+  if (sentences.length > 0) {
+    let dialogue = sentences[0].trim();
+    
+    // If it's too short or looks like meta, try the next sentence
+    if (dialogue.length < 10 || dialogue.match(/^(as|however|let|here|to|while|but)/i)) {
+      dialogue = sentences.find(s => !s.match(/^(as|however|let|here|to|while|but)/i)) || dialogue;
+    }
+    
+    return dialogue.trim();
+  }
+
+  return cleaned.substring(0, 200).trim();
 }
 
 // Generate a single debate response
@@ -48,19 +77,19 @@ async function generateDebateResponse(systemPrompt, conversationHistory) {
     const response = await groq.chat.completions.create({
       model: "llama-3.1-8b-instant",
       messages: messages,
-      max_tokens: 300,
+      max_tokens: 200,  // Reduced max tokens to get shorter, focused responses
     });
 
     const rawContent = response.choices[0]?.message?.content || "";
-    const cleanedContent = cleanResponse(rawContent);
+    const dialogue = extractDialogue(rawContent);
     
     logger.info("Response generated", {
       rawLength: rawContent.length,
-      cleanedLength: cleanedContent.length,
-      preview: cleanedContent.substring(0, 100),
+      extractedLength: dialogue.length,
+      preview: dialogue.substring(0, 100),
     });
 
-    return cleanedContent;
+    return dialogue;
   } catch (error) {
     logger.error("Failed to generate debate response", {
       message: error.message,
@@ -90,36 +119,35 @@ router.post("/start", requireAuth, syncUser, async (req, res) => {
   }
 
   try {
-    const systemPrompt = buildDebatePrompt(
+    // Profile1 speaks first
+    logger.info("Generating Profile1 initial response (turn 1)");
+    const systemPrompt1 = buildDebatePrompt(
       req.body.profile1,
       req.body.profile2,
-      req.body.topic
+      req.body.topic,
+      true  // Profile1's turn
     );
-
-    logger.info("System prompt built", {
-      promptLength: systemPrompt.length,
-    });
-
-    // Start with profile1 response
-    logger.info("Generating profile1 response...");
-    const profile1Response = await generateDebateResponse(systemPrompt, []);
+    const profile1Response = await generateDebateResponse(systemPrompt1, []);
     logger.info("Profile1 response completed", {
       length: profile1Response.length,
-      content: profile1Response.substring(0, 50),
+      content: profile1Response.substring(0, 80),
     });
 
-    // Profile2 responds to profile1
-    logger.info("Generating profile2 response...");
-    const conversationHistory = [
-      { role: "assistant", content: profile1Response },
-    ];
-    const profile2Response = await generateDebateResponse(
-      systemPrompt,
-      conversationHistory
+    // Profile2 responds
+    logger.info("Generating Profile2 initial response (turn 2)");
+    const systemPrompt2 = buildDebatePrompt(
+      req.body.profile1,
+      req.body.profile2,
+      req.body.topic,
+      false  // Profile2's turn
     );
+    const conversationHistory = [
+      { role: "user", content: profile1Response },
+    ];
+    const profile2Response = await generateDebateResponse(systemPrompt2, conversationHistory);
     logger.info("Profile2 response completed", {
       length: profile2Response.length,
-      content: profile2Response.substring(0, 50),
+      content: profile2Response.substring(0, 80),
     });
 
     const tokensUsed = Math.ceil((profile1Response.length + profile2Response.length) / 4);
@@ -136,15 +164,15 @@ router.post("/start", requireAuth, syncUser, async (req, res) => {
     });
 
     const responseData = {
-      profile1Response: profile1Response || "No response generated",
-      profile2Response: profile2Response || "No response generated",
+      profile1Response: profile1Response || "I'm ready to debate this topic.",
+      profile2Response: profile2Response || "I appreciate that perspective.",
       tokensUsed: {
         profile1: Math.ceil((profile1Response || "").length / 4),
         profile2: Math.ceil((profile2Response || "").length / 4),
       },
     };
 
-    logger.info("Sending response", responseData);
+    logger.info("Sending response", { hasProfile1: !!responseData.profile1Response, hasProfile2: !!responseData.profile2Response });
     res.json(responseData);
   } catch (error) {
     logger.error("Error starting debate", {
@@ -177,16 +205,25 @@ router.post("/continue", requireAuth, syncUser, async (req, res) => {
   }
 
   try {
-    const systemPrompt = buildDebatePrompt(profile1, profile2, topic);
+    // Determine whose turn it is
+    // If even messages count, Profile1 speaks next. If odd, Profile2 speaks next.
+    const messageCount = (messages || []).length;
+    const isProfile1Turn = messageCount % 2 === 0;
+    const currentSpeaker = isProfile1Turn ? profile1.name : profile2.name;
+
+    logger.info("Turn determination", {
+      messageCount,
+      isProfile1Turn,
+      currentSpeaker,
+    });
+
+    const systemPrompt = buildDebatePrompt(profile1, profile2, topic, isProfile1Turn);
 
     // Build conversation history from previous messages
     const conversationHistory = (messages || [])
       .filter((msg) => msg.role !== "system")
       .map((msg) => ({
-        role:
-          msg.role === "profile1" || msg.role === "profile2"
-            ? "assistant"
-            : "user",
+        role: "user",  // All previous messages go as user messages
         content: msg.content,
       }));
 
@@ -195,33 +232,16 @@ router.post("/continue", requireAuth, syncUser, async (req, res) => {
       lastMessage: conversationHistory[conversationHistory.length - 1]?.content?.substring(0, 50),
     });
 
-    // Generate next response from profile1
-    logger.info("Generating profile1 CONTINUE response...");
-    const profile1Response = await generateDebateResponse(
-      systemPrompt,
-      conversationHistory
-    );
-    logger.info("Profile1 continue response completed", {
-      length: profile1Response.length,
-      content: profile1Response.substring(0, 50),
+    // Generate response for whoever's turn it is
+    logger.info(`Generating ${isProfile1Turn ? 'Profile1' : 'Profile2'} continue response...`);
+    const response = await generateDebateResponse(systemPrompt, conversationHistory);
+    
+    logger.info(`${isProfile1Turn ? 'Profile1' : 'Profile2'} continue response completed`, {
+      length: response.length,
+      content: response.substring(0, 80),
     });
 
-    // Generate response from profile2
-    logger.info("Generating profile2 CONTINUE response...");
-    const updatedHistory = [
-      ...conversationHistory,
-      { role: "assistant", content: profile1Response },
-    ];
-    const profile2Response = await generateDebateResponse(
-      systemPrompt,
-      updatedHistory
-    );
-    logger.info("Profile2 continue response completed", {
-      length: profile2Response.length,
-      content: profile2Response.substring(0, 50),
-    });
-
-    const tokensUsed = Math.ceil((profile1Response.length + profile2Response.length) / 4);
+    const tokensUsed = Math.ceil(response.length / 4);
 
     await User.updateOne(
       { clerkId: req.auth.userId },
@@ -230,20 +250,22 @@ router.post("/continue", requireAuth, syncUser, async (req, res) => {
 
     logger.info("Debate CONTINUED successfully", {
       tokensUsed,
-      profile1Length: profile1Response.length,
-      profile2Length: profile2Response.length,
+      responseLength: response.length,
+      speaker: currentSpeaker,
     });
 
     const responseData = {
-      profile1Response: profile1Response || "No response generated",
-      profile2Response: profile2Response || "No response generated",
+      profile1Response: isProfile1Turn ? (response || "I agree with your point.") : null,
+      profile2Response: isProfile1Turn ? null : (response || "That's an interesting perspective."),
+      currentSpeaker,
+      isProfile1Turn,
       tokensUsed: {
-        profile1: Math.ceil((profile1Response || "").length / 4),
-        profile2: Math.ceil((profile2Response || "").length / 4),
+        profile1: isProfile1Turn ? tokensUsed : 0,
+        profile2: isProfile1Turn ? 0 : tokensUsed,
       },
     };
 
-    logger.info("Sending continue response", responseData);
+    logger.info("Sending continue response", { speaker: currentSpeaker, hasResponse: !!response });
     res.json(responseData);
   } catch (error) {
     logger.error("Error continuing debate", {
