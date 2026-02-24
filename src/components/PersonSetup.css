@@ -35,6 +35,52 @@
   font-size: 1.1em;
 }
 
+/* Language Selector */
+.languageSelector {
+  background: #f0f4ff;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+  border: 2px solid #e0e7ff;
+}
+
+.languageSelector label {
+  display: block;
+  font-weight: 700;
+  color: #667eea;
+  margin-bottom: 12px;
+  font-size: 1em;
+}
+
+.languageButtons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.langBtn {
+  padding: 10px 20px;
+  border: 2px solid #e0e7ff;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #667eea;
+  transition: all 0.3s ease;
+  font-size: 0.95em;
+}
+
+.langBtn:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.langBtn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+}
+
 .personsGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -159,6 +205,40 @@
 
 .contextField {
   resize: vertical;
+}
+
+/* Preferences Preview */
+.preferencesPreview {
+  background: #fff8f0;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 12px;
+  border-left: 4px solid #f59e0b;
+  font-size: 0.85em;
+}
+
+.pref-item {
+  padding: 6px 0;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pref-item span {
+  font-weight: 700;
+  min-width: fit-content;
+}
+
+.pref-item.love {
+  color: #dc2626;
+}
+
+.pref-item.hate {
+  color: #ea580c;
+}
+
+.pref-item.dislike {
+  color: #d97706;
 }
 
 .startBtn {

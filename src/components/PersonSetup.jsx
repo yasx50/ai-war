@@ -7,6 +7,7 @@ export default function PersonSetup({ onSetupComplete }) {
     { id: 1, name: "", context: "", photo: null, photoPreview: null },
     { id: 2, name: "", context: "", photo: null, photoPreview: null }
   ]);
+  const [language, setLanguage] = useState("hindi");
 
   const handlePersonChange = (id, field, value) => {
     setPersons(persons.map(p =>
@@ -28,20 +29,63 @@ export default function PersonSetup({ onSetupComplete }) {
     }
   };
 
+  const parsePreferences = (context) => {
+    const loveMatch = context.match(/love.*?([\w\s,]+?)(?:hate|dislikes?|and|$)/i);
+    const hateMatch = context.match(/hate.*?([\w\s,]+?)(?:love|and|$)/i);
+    const dislikesMatch = context.match(/dislikes?.*?([\w\s,]+?)(?:love|hate|and|$)/i);
+
+    return {
+      loves: loveMatch ? loveMatch[1].trim() : "",
+      hates: hateMatch ? hateMatch[1].trim() : "",
+      dislikes: dislikesMatch ? dislikesMatch[1].trim() : ""
+    };
+  };
+
   const handleSubmit = () => {
     const allFilled = persons.every(p => p.name.trim() && p.context.trim());
     if (!allFilled) {
-      alert("Please fill in name and context for both persons");
+      alert("Name aur context dono fill kar!");
       return;
     }
-    onSetupComplete(persons);
+
+    const enrichedPersons = persons.map(p => ({
+      ...p,
+      preferences: parsePreferences(p.context)
+    }));
+
+    onSetupComplete(enrichedPersons, language);
   };
 
   return (
     <div className="setupContainer">
       <div className="setupCard">
-        <h1 className="setupTitle">⚙️ AI Personas Setup</h1>
-        <p className="setupSubtitle">Create two unique AI personalities with their own context</p>
+        <h1 className="setupTitle">⚙️ AI Arena Setup</h1>
+        <p className="setupSubtitle">Do AI ko personality do - love, hate, sab battle</p>
+
+        {/* Language Selection */}
+        <div className="languageSelector">
+          <label>🌐 Debate Language:</label>
+          <div className="languageButtons">
+            <button
+              className={`langBtn ${language === "hindi" ? "active" : ""}`}
+              onClick={() => setLanguage("hindi")}
+            >
+              हिंदी Hindi
+            </button>
+            <button
+              className={`langBtn ${language === "marathi" ? "active" : ""}`}
+              onClick={() => setLanguage("marathi")}
+            >
+              मराठी Marathi
+            </button>
+            <button
+              className={`langBtn ${language === "english" ? "active" : ""}`}
+              onClick={() => setLanguage("english")}
+            >
+              🇬🇧 English
+            </button>
+          </div>
+        </div>
 
         <div className="personsGrid">
           {persons.map((person, idx) => (
@@ -71,7 +115,7 @@ export default function PersonSetup({ onSetupComplete }) {
                     />
                     <div className="photoPlaceholder">
                       <Upload size={24} />
-                      <span>Upload Photo</span>
+                      <span>Photo Upload</span>
                     </div>
                   </label>
                 )}
@@ -88,19 +132,40 @@ export default function PersonSetup({ onSetupComplete }) {
 
               {/* Context Input */}
               <textarea
-                placeholder={`Add context for ${person.name || `Person ${idx + 1}`}... (e.g., profession, expertise, personality)`}
+                placeholder={`Personality describe kar...\nExample: I love coding, hate meetings, love coffee. I am introvert.`}
                 value={person.context}
                 onChange={(e) => handlePersonChange(person.id, "context", e.target.value)}
                 className="contextField"
                 rows="6"
               />
+
+              {/* Auto-extracted preferences */}
+              {person.context && (
+                <div className="preferencesPreview">
+                  {parsePreferences(person.context).loves && (
+                    <div className="pref-item love">
+                      <span>❤️ Love:</span> {parsePreferences(person.context).loves}
+                    </div>
+                  )}
+                  {parsePreferences(person.context).hates && (
+                    <div className="pref-item hate">
+                      <span>😤 Hate:</span> {parsePreferences(person.context).hates}
+                    </div>
+                  )}
+                  {parsePreferences(person.context).dislikes && (
+                    <div className="pref-item dislike">
+                      <span>😒 Dislike:</span> {parsePreferences(person.context).dislikes}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
 
         <button className="startBtn" onClick={handleSubmit}>
           <Plus size={20} />
-          Start Debate
+          Start Lafda
         </button>
       </div>
     </div>
