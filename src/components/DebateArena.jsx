@@ -11,8 +11,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Swords, Send, RotateCcw, Zap, Lock, Square } from 'lucide-react';
+import { Swords, RotateCcw, Lock, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApi } from '../lib/api';
 import { useTokens } from '../hooks/useTokens';
@@ -30,22 +29,22 @@ const PRESET_PROFILES = [
 const MessageBubble = ({ message, profile, side }) => {
   const isLeft = side === 'left';
   return (
-    <div className={cn('flex gap-3 mb-4', isLeft ? 'flex-row' : 'flex-row-reverse')}>
+    <div className={cn('flex gap-2 sm:gap-3 mb-4', isLeft ? 'flex-row' : 'flex-row-reverse')}>
       <div
         className={cn(
-          'w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0 shadow',
+          'w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-base sm:text-lg flex-shrink-0 shadow',
           isLeft ? 'bg-blue-900' : 'bg-red-900'
         )}
       >
         {profile?.emoji || profile?.avatar || '🎭'}
       </div>
-      <div className={cn('max-w-[75%] space-y-1', isLeft ? 'items-start' : 'items-end')}>
+      <div className={cn('max-w-[82%] sm:max-w-[75%] space-y-1', isLeft ? 'items-start' : 'items-end')}>
         <span className={cn('text-xs text-zinc-500 font-medium', isLeft ? 'pl-1' : 'pr-1 block text-right')}>
           {profile?.name}
         </span>
         <div
           className={cn(
-            'px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-md',
+            'px-3 py-2.5 sm:px-4 sm:py-3 rounded-2xl text-sm leading-relaxed shadow-md',
             isLeft
               ? 'bg-zinc-800 text-zinc-100 rounded-tl-none border border-zinc-700/60'
               : 'bg-gradient-to-br from-red-900/70 to-red-800/40 text-zinc-100 rounded-tr-none border border-red-700/40'
@@ -80,18 +79,15 @@ const DebateArena = ({ userProfiles = [] }) => {
   const [started, setStarted] = useState(false);
   const [isDebating, setIsDebating] = useState(false);
   const scrollRef = useRef(null);
-  const abortControllerRef = useRef(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-    console.log('Messages updated:', messages);
   }, [messages]);
 
   useEffect(() => {
     if (isDebating && !loading && messages.length >= 2) {
-      // Only auto-generate if we have initial messages and aren't already loading
       const timer = setTimeout(() => {
         continueDebate();
       }, 1500);
@@ -111,31 +107,20 @@ const DebateArena = ({ userProfiles = [] }) => {
     setIsDebating(true);
 
     try {
-      const requestPayload = {
-        profile1: profile1,
-        profile2: profile2,
+      const res = await api.post('/debate/start', {
+        profile1,
+        profile2,
         topic: topic.trim(),
         messages: [],
-      };
-      console.log('Sending start debate request:', requestPayload);
-      
-      const res = await api.post('/debate/start', requestPayload);
+      });
 
       const data = res.data;
-      console.log('Debate API Response:', data);
-      console.log('Profile1Response:', data.profile1Response);
-      console.log('Profile2Response:', data.profile2Response);
-      
-      const newMessages = [
-        { id: 1, role: 'profile1', content: data.profile1Response || "No response", tokens: data.tokensUsed?.profile1 },
-        { id: 2, role: 'profile2', content: data.profile2Response || "No response", tokens: data.tokensUsed?.profile2 },
-      ];
-      
-      console.log('Creating messages array:', newMessages);
-      setMessages(newMessages);
+      setMessages([
+        { id: 1, role: 'profile1', content: data.profile1Response || 'No response', tokens: data.tokensUsed?.profile1 },
+        { id: 2, role: 'profile2', content: data.profile2Response || 'No response', tokens: data.tokensUsed?.profile2 },
+      ]);
       refetchTokens();
     } catch (err) {
-      console.error('Start debate error:', err);
       setMessages([{ id: 1, role: 'system', content: `Error: ${err.message}` }]);
       setIsDebating(false);
     } finally {
@@ -148,36 +133,24 @@ const DebateArena = ({ userProfiles = [] }) => {
     setLoading(true);
 
     try {
-      const messagesToSend = messages.filter(m => m.role !== 'system');
-      console.log('Sending continue request with messages:', messagesToSend);
-      
       const res = await api.post('/debate/continue', {
         profile1,
         profile2,
         topic,
-        messages: messagesToSend,
+        messages: messages.filter(m => m.role !== 'system'),
       });
 
       const data = res.data;
-      console.log('Continue response received:', data);
-      
-      // Handle single response format from /continue
       const newMessage = {
         id: Date.now() + Math.random(),
         role: data.isProfile1Turn ? 'profile1' : 'profile2',
         content: data.isProfile1Turn ? data.profile1Response : data.profile2Response,
         tokens: data.isProfile1Turn ? data.tokensUsed.profile1 : data.tokensUsed.profile2,
       };
-      
-      console.log('Adding new message:', newMessage);
-      setMessages((prev) => {
-        const updated = [...prev, newMessage];
-        console.log('Updated messages state:', updated);
-        return updated;
-      });
+
+      setMessages((prev) => [...prev, newMessage]);
       refetchTokens();
     } catch (err) {
-      console.error('Continue debate error:', err);
       setMessages((prev) => [...prev, { id: Date.now(), role: 'system', content: `Error: ${err.message}` }]);
     } finally {
       setLoading(false);
@@ -194,20 +167,21 @@ const DebateArena = ({ userProfiles = [] }) => {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4 sm:gap-6 w-full">
+
       {/* Setup Panel */}
       {!started && (
-        <div className="space-y-5 p-6 rounded-2xl bg-zinc-900/60 border border-zinc-700/60 backdrop-blur-sm">
+        <div className="space-y-4 sm:space-y-5 p-4 sm:p-6 rounded-2xl bg-zinc-900/60 border border-zinc-700/60 backdrop-blur-sm">
           <div className="flex items-center gap-2 mb-1">
             <Swords className="w-5 h-5 text-amber-400" />
-            <h2 className="text-lg font-bold text-white tracking-wide">Setup Your Debate</h2>
+            <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">Setup Your Debate</h2>
           </div>
 
           <TokenCounter />
           <Separator className="bg-zinc-800" />
 
-          {/* Profile Selectors */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Profile Selectors — stack on mobile */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-2">
               <label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
                 🔵 Fighter 1
@@ -257,7 +231,7 @@ const DebateArena = ({ userProfiles = [] }) => {
 
           {/* VS Badge */}
           {profile1 && profile2 && (
-            <div className="flex items-center justify-center gap-4 py-2">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 py-1">
               <span className="text-2xl">{profile1.emoji}</span>
               <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40 font-bold px-3">VS</Badge>
               <span className="text-2xl">{profile2.emoji}</span>
@@ -301,16 +275,18 @@ const DebateArena = ({ userProfiles = [] }) => {
       {/* Arena */}
       {started && (
         <div className="rounded-2xl bg-zinc-900/60 border border-zinc-700/60 overflow-hidden">
-          {/* Arena Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/80">
-            <div className="flex items-center gap-3">
-              <span className="text-lg">{profile1?.emoji}</span>
-              <span className="text-xs text-zinc-400 font-medium">{profile1?.name}</span>
-              <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px] px-2">VS</Badge>
-              <span className="text-xs text-zinc-400 font-medium">{profile2?.name}</span>
-              <span className="text-lg">{profile2?.emoji}</span>
+
+          {/* Arena Header — wraps on very small screens */}
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-3 border-b border-zinc-800 bg-zinc-900/80">
+            <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-wrap">
+              <span className="text-base sm:text-lg">{profile1?.emoji}</span>
+              <span className="text-xs text-zinc-400 font-medium truncate max-w-[70px] sm:max-w-none">{profile1?.name}</span>
+              <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px] px-1.5 sm:px-2">VS</Badge>
+              <span className="text-xs text-zinc-400 font-medium truncate max-w-[70px] sm:max-w-none">{profile2?.name}</span>
+              <span className="text-base sm:text-lg">{profile2?.emoji}</span>
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               <TokenCounter compact />
               {isDebating && (
                 <Button
@@ -319,8 +295,8 @@ const DebateArena = ({ userProfiles = [] }) => {
                   onClick={() => setIsDebating(false)}
                   className="h-7 px-2 text-xs text-red-400 hover:text-red-500 hover:bg-red-500/10"
                 >
-                  <Square className="w-3 h-3 mr-1 fill-current" />
-                  Stop
+                  <Square className="w-3 h-3 sm:mr-1 fill-current" />
+                  <span className="hidden sm:inline">Stop</span>
                 </Button>
               )}
               <Button
@@ -329,15 +305,15 @@ const DebateArena = ({ userProfiles = [] }) => {
                 onClick={reset}
                 className="h-7 px-2 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800"
               >
-                <RotateCcw className="w-3 h-3 mr-1" />
-                Reset
+                <RotateCcw className="w-3 h-3 sm:mr-1" />
+                <span className="hidden sm:inline">Reset</span>
               </Button>
             </div>
           </div>
 
           {/* Topic Banner */}
-          <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/20">
-            <p className="text-xs text-amber-400 font-medium text-center">
+          <div className="px-3 sm:px-4 py-2 bg-amber-500/10 border-b border-amber-500/20">
+            <p className="text-xs text-amber-400 font-medium text-center line-clamp-2 sm:line-clamp-1">
               📢 {topic}
             </p>
           </div>
@@ -345,7 +321,7 @@ const DebateArena = ({ userProfiles = [] }) => {
           {/* Messages */}
           <div
             ref={scrollRef}
-            className="h-[420px] overflow-y-auto p-4 space-y-1 scroll-smooth"
+            className="h-[360px] sm:h-[420px] overflow-y-auto p-3 sm:p-4 space-y-1 scroll-smooth"
           >
             {loading && messages.length === 0 && (
               <div className="flex items-center justify-center h-full">
@@ -366,17 +342,15 @@ const DebateArena = ({ userProfiles = [] }) => {
 
             {messages.length === 0 && !loading && (
               <div className="flex items-center justify-center h-full">
-                <p className="text-zinc-500 text-sm">Messages will appear here once debate starts</p>
+                <p className="text-zinc-500 text-sm text-center px-4">Messages will appear here once debate starts</p>
               </div>
             )}
 
             {messages.map((msg) => {
-              console.log('Rendering message:', msg);
-              
               if (msg.role === 'user') {
                 return (
                   <div key={msg.id} className="flex justify-center my-3">
-                    <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-xs px-3">
+                    <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-xs px-3 text-center">
                       🎙️ You steered: "{msg.content}"
                     </Badge>
                   </div>
@@ -389,10 +363,10 @@ const DebateArena = ({ userProfiles = [] }) => {
                   </Alert>
                 );
               }
-              
+
               const displayProfile = msg.role === 'profile1' ? profile1 : profile2;
-              const displayContent = msg.content || "(No response generated)";
-              
+              const displayContent = msg.content || '(No response generated)';
+
               return (
                 <MessageBubble
                   key={msg.id}
