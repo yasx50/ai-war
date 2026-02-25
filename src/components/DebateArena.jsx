@@ -11,33 +11,75 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Swords, RotateCcw, Lock, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApi } from '../lib/api';
 import { useTokens } from '../hooks/useTokens';
 import TokenCounter from './TokenCounter';
 
-const PRESET_PROFILES = [
-  { _id: 'preset_virat', name: 'Virat Kohli', emoji: '🏏', type: 'preset', presetKey: 'virat_kohli' },
-  { _id: 'preset_ronaldo', name: 'Cristiano Ronaldo', emoji: '⚽', type: 'preset', presetKey: 'cristiano_ronaldo' },
-  { _id: 'preset_modi', name: 'Narendra Modi', emoji: '🇮🇳', type: 'preset', presetKey: 'narendra_modi' },
-  { _id: 'preset_trump', name: 'Donald Trump', emoji: '🦅', type: 'preset', presetKey: 'donald_trump' },
-  { _id: 'preset_elon', name: 'Elon Musk', emoji: '🚀', type: 'preset', presetKey: 'elon_musk' },
-  { _id: 'preset_sam', name: 'Sam Altman', emoji: '🤖', type: 'preset', presetKey: 'sam_altman' },
+// iconNum maps directly to /public/avatars/{n}.svg
+const FEATURED = [
+  { iconNum: 1, name: 'Elon Musk' },
+  { iconNum: 2, name: 'Virat Kohli' },
+  { iconNum: 3, name: 'Cristiano Ronaldo' },
+  { iconNum: 4, name: 'Narendra Modi' },
+  { iconNum: 5, name: 'Sam Altman' },
+  { iconNum: 6, name: 'Donald Trump' },
 ];
+
+const PRESET_PROFILES = [
+  { _id: 'preset_virat',   name: 'Virat Kohli',       emoji: '🏏', type: 'preset', presetKey: 'virat_kohli' },
+  { _id: 'preset_ronaldo', name: 'Cristiano Ronaldo', emoji: '⚽', type: 'preset', presetKey: 'cristiano_ronaldo' },
+  { _id: 'preset_modi',    name: 'Narendra Modi',     emoji: '🇮🇳', type: 'preset', presetKey: 'narendra_modi' },
+  { _id: 'preset_trump',   name: 'Donald Trump',      emoji: '🦅', type: 'preset', presetKey: 'donald_trump' },
+  { _id: 'preset_elon',    name: 'Elon Musk',         emoji: '🚀', type: 'preset', presetKey: 'elon_musk' },
+  { _id: 'preset_sam',     name: 'Sam Altman',        emoji: '🤖', type: 'preset', presetKey: 'sam_altman' },
+];
+
+// Look up iconNum from FEATURED by matching name (case-insensitive)
+const getSvgIndex = (name) => {
+  if (!name) return null;
+  const match = FEATURED.find(
+    (f) => f.name.trim().toLowerCase() === name.trim().toLowerCase()
+  );
+  return match ? match.iconNum : null;
+};
+
+// Avatar component: shows SVG if preset, emoji fallback otherwise
+const ProfileAvatar = ({ profile, className, fallbackClassName }) => {
+  const svgIndex = getSvgIndex(profile?.name);
+  const fallback = profile?.emoji || profile?.avatar || '🎭';
+
+  return (
+    <Avatar className={cn('rounded-xl flex-shrink-0', className)}>
+      {svgIndex && (
+        <AvatarImage
+          src={`${svgIndex}.svg`}
+          alt={profile?.name}
+          className="object-cover rounded-xl"
+        />
+      )}
+      <AvatarFallback className={cn('rounded-xl', fallbackClassName)}>
+        {fallback}
+      </AvatarFallback>
+    </Avatar>
+  );
+};
 
 const MessageBubble = ({ message, profile, side }) => {
   const isLeft = side === 'left';
+  const bgClass = isLeft ? 'bg-blue-900' : 'bg-red-900';
+
   return (
     <div className={cn('flex gap-2 sm:gap-3 mb-4', isLeft ? 'flex-row' : 'flex-row-reverse')}>
-      <div
-        className={cn(
-          'w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-base sm:text-lg flex-shrink-0 shadow',
-          isLeft ? 'bg-blue-900' : 'bg-red-900'
-        )}
-      >
-        {profile?.emoji || profile?.avatar || '🎭'}
-      </div>
+      {/* SVG avatar in bubble */}
+      <ProfileAvatar
+        profile={profile}
+        className={cn('w-8 h-8 sm:w-9 sm:h-9 shadow', bgClass)}
+        fallbackClassName={cn('text-base sm:text-lg', bgClass)}
+      />
+
       <div className={cn('max-w-[82%] sm:max-w-[75%] space-y-1', isLeft ? 'items-start' : 'items-end')}>
         <span className={cn('text-xs text-zinc-500 font-medium', isLeft ? 'pl-1' : 'pr-1 block text-right')}>
           {profile?.name}
@@ -66,10 +108,10 @@ const DebateArena = ({ userProfiles = [] }) => {
   const api = useApi();
   const { isExhausted, refetch: refetchTokens } = useTokens();
 
-  const allProfiles = [...PRESET_PROFILES, ...userProfiles.map(p => ({
-    ...p,
-    emoji: p.avatar || '👤',
-  }))];
+  const allProfiles = [
+    ...PRESET_PROFILES,
+    ...userProfiles.map(p => ({ ...p, emoji: p.avatar || '👤' })),
+  ];
 
   const [profile1Id, setProfile1Id] = useState('');
   const [profile2Id, setProfile2Id] = useState('');
@@ -88,9 +130,7 @@ const DebateArena = ({ userProfiles = [] }) => {
 
   useEffect(() => {
     if (isDebating && !loading && messages.length >= 2) {
-      const timer = setTimeout(() => {
-        continueDebate();
-      }, 1500);
+      const timer = setTimeout(() => { continueDebate(); }, 1500);
       return () => clearTimeout(timer);
     }
   }, [isDebating, loading, messages.length]);
@@ -105,15 +145,8 @@ const DebateArena = ({ userProfiles = [] }) => {
     setMessages([]);
     setLoading(true);
     setIsDebating(true);
-
     try {
-      const res = await api.post('/debate/start', {
-        profile1,
-        profile2,
-        topic: topic.trim(),
-        messages: [],
-      });
-
+      const res = await api.post('/debate/start', { profile1, profile2, topic: topic.trim(), messages: [] });
       const data = res.data;
       setMessages([
         { id: 1, role: 'profile1', content: data.profile1Response || 'No response', tokens: data.tokensUsed?.profile1 },
@@ -131,24 +164,18 @@ const DebateArena = ({ userProfiles = [] }) => {
   const continueDebate = async () => {
     if (loading || isExhausted) return;
     setLoading(true);
-
     try {
       const res = await api.post('/debate/continue', {
-        profile1,
-        profile2,
-        topic,
+        profile1, profile2, topic,
         messages: messages.filter(m => m.role !== 'system'),
       });
-
       const data = res.data;
-      const newMessage = {
+      setMessages((prev) => [...prev, {
         id: Date.now() + Math.random(),
         role: data.isProfile1Turn ? 'profile1' : 'profile2',
         content: data.isProfile1Turn ? data.profile1Response : data.profile2Response,
         tokens: data.isProfile1Turn ? data.tokensUsed.profile1 : data.tokensUsed.profile2,
-      };
-
-      setMessages((prev) => [...prev, newMessage]);
+      }]);
       refetchTokens();
     } catch (err) {
       setMessages((prev) => [...prev, { id: Date.now(), role: 'system', content: `Error: ${err.message}` }]);
@@ -180,7 +207,7 @@ const DebateArena = ({ userProfiles = [] }) => {
           <TokenCounter />
           <Separator className="bg-zinc-800" />
 
-          {/* Profile Selectors — stack on mobile */}
+          {/* Profile Selectors */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-2">
               <label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
@@ -191,16 +218,26 @@ const DebateArena = ({ userProfiles = [] }) => {
                   <SelectValue placeholder="Choose persona..." />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-zinc-700">
-                  {allProfiles.map((p) => (
-                    <SelectItem
-                      key={p._id}
-                      value={p._id}
-                      disabled={p._id === profile2Id}
-                      className="text-zinc-200 focus:bg-zinc-800"
-                    >
-                      {p.emoji || p.avatar || '👤'} {p.name}
-                    </SelectItem>
-                  ))}
+                  {allProfiles.map((p) => {
+                    const svgIndex = getSvgIndex(p.name);
+                    return (
+                      <SelectItem
+                        key={p._id}
+                        value={p._id}
+                        disabled={p._id === profile2Id}
+                        className="text-zinc-200 focus:bg-zinc-800"
+                      >
+                        <div className="flex items-center gap-2">
+                          {svgIndex ? (
+                            <img src={`/${svgIndex}.svg`} alt={p.name} className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+                          ) : (
+                            <span className="text-sm flex-shrink-0">{p.emoji || '👤'}</span>
+                          )}
+                          {p.name}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -214,27 +251,55 @@ const DebateArena = ({ userProfiles = [] }) => {
                   <SelectValue placeholder="Choose persona..." />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-900 border-zinc-700">
-                  {allProfiles.map((p) => (
-                    <SelectItem
-                      key={p._id}
-                      value={p._id}
-                      disabled={p._id === profile1Id}
-                      className="text-zinc-200 focus:bg-zinc-800"
-                    >
-                      {p.emoji || p.avatar || '👤'} {p.name}
-                    </SelectItem>
-                  ))}
+                  {allProfiles.map((p) => {
+                    const svgIndex = getSvgIndex(p.name);
+                    return (
+                      <SelectItem
+                        key={p._id}
+                        value={p._id}
+                        disabled={p._id === profile1Id}
+                        className="text-zinc-200 focus:bg-zinc-800"
+                      >
+                        <div className="flex items-center gap-2">
+                          {svgIndex ? (
+                            <img src={`/avatars/${svgIndex}.svg`} alt={p.name} className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+                          ) : (
+                            <span className="text-sm flex-shrink-0">{p.emoji || '👤'}</span>
+                          )}
+                          {p.name}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* VS Badge */}
+          {/* VS preview with SVG avatars */}
           {profile1 && profile2 && (
-            <div className="flex items-center justify-center gap-3 sm:gap-4 py-1">
-              <span className="text-2xl">{profile1.emoji}</span>
-              <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40 font-bold px-3">VS</Badge>
-              <span className="text-2xl">{profile2.emoji}</span>
+            <div className="flex items-center justify-center gap-4 py-2">
+              <div className="flex flex-col items-center gap-1.5">
+                <ProfileAvatar
+                  profile={profile1}
+                  className="h-12 w-12 ring-2 ring-blue-500/40"
+                  fallbackClassName="bg-blue-900 text-xl"
+                />
+                <span className="text-[10px] text-zinc-400 max-w-[60px] truncate text-center">{profile1.name}</span>
+              </div>
+
+              <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/40 font-black text-sm px-4 py-1">
+                VS
+              </Badge>
+
+              <div className="flex flex-col items-center gap-1.5">
+                <ProfileAvatar
+                  profile={profile2}
+                  className="h-12 w-12 ring-2 ring-red-500/40"
+                  fallbackClassName="bg-red-900 text-xl"
+                />
+                <span className="text-[10px] text-zinc-400 max-w-[60px] truncate text-center">{profile2.name}</span>
+              </div>
             </div>
           )}
 
@@ -276,14 +341,14 @@ const DebateArena = ({ userProfiles = [] }) => {
       {started && (
         <div className="rounded-2xl bg-zinc-900/60 border border-zinc-700/60 overflow-hidden">
 
-          {/* Arena Header — wraps on very small screens */}
+          {/* Arena Header */}
           <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4 py-3 border-b border-zinc-800 bg-zinc-900/80">
-            <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-wrap">
-              <span className="text-base sm:text-lg">{profile1?.emoji}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <ProfileAvatar profile={profile1} className="w-7 h-7" fallbackClassName="bg-blue-900 text-sm" />
               <span className="text-xs text-zinc-400 font-medium truncate max-w-[70px] sm:max-w-none">{profile1?.name}</span>
-              <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px] px-1.5 sm:px-2">VS</Badge>
+              <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px] px-1.5 sm:px-2 flex-shrink-0">VS</Badge>
               <span className="text-xs text-zinc-400 font-medium truncate max-w-[70px] sm:max-w-none">{profile2?.name}</span>
-              <span className="text-base sm:text-lg">{profile2?.emoji}</span>
+              <ProfileAvatar profile={profile2} className="w-7 h-7" fallbackClassName="bg-red-900 text-sm" />
             </div>
 
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -328,11 +393,8 @@ const DebateArena = ({ userProfiles = [] }) => {
                 <div className="text-center space-y-3">
                   <div className="flex gap-1 justify-center">
                     {[0, 1, 2].map((i) => (
-                      <div
-                        key={i}
-                        className="w-2 h-2 bg-amber-400 rounded-full animate-bounce"
-                        style={{ animationDelay: `${i * 0.15}s` }}
-                      />
+                      <div key={i} className="w-2 h-2 bg-amber-400 rounded-full animate-bounce"
+                        style={{ animationDelay: `${i * 0.15}s` }} />
                     ))}
                   </div>
                   <p className="text-zinc-500 text-sm">Generating debate...</p>
@@ -365,12 +427,10 @@ const DebateArena = ({ userProfiles = [] }) => {
               }
 
               const displayProfile = msg.role === 'profile1' ? profile1 : profile2;
-              const displayContent = msg.content || '(No response generated)';
-
               return (
                 <MessageBubble
                   key={msg.id}
-                  message={{ ...msg, content: displayContent }}
+                  message={{ ...msg, content: msg.content || '(No response generated)' }}
                   profile={displayProfile}
                   side={msg.role === 'profile1' ? 'left' : 'right'}
                 />
@@ -381,11 +441,8 @@ const DebateArena = ({ userProfiles = [] }) => {
               <div className="flex justify-center py-2">
                 <div className="flex gap-1">
                   {[0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"
-                      style={{ animationDelay: `${i * 0.15}s` }}
-                    />
+                    <div key={i} className="w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce"
+                      style={{ animationDelay: `${i * 0.15}s` }} />
                   ))}
                 </div>
               </div>
