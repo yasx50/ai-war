@@ -4,14 +4,13 @@ import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Swords, Zap, Users, Shield } from 'lucide-react';
-
 const FEATURED = [
-  { emoji: '🏏', name: 'Virat Kohli' },
-  { emoji: '🚀', name: 'Elon Musk' },
-  { emoji: '🦅', name: 'Trump' },
-  { emoji: '⚽', name: 'Ronaldo' },
-  { emoji: '🤖', name: 'Sam Altman' },
-  { emoji: '🇮🇳', name: 'Modi' },
+  { iconNum: 1, name: 'Elon Musk' },
+  { iconNum: 2, name: 'virat kohli' },
+  { iconNum: 3, name: 'Cristiano Ronaldo' },
+  { iconNum: 4, name: 'Narendra modi' },
+  { iconNum: 5, name: 'Sam Altman' },
+  { iconNum: 6, name: ' Donald Trumph' },
 ];
 
 const FeatureCard = ({ icon, title, desc }) => (
@@ -58,10 +57,10 @@ const Home = () => {
           ⚔️ AI-Powered Debate Engine
         </Badge>
 
-        <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 leading-none">
+        <h1 className="font-google text-5xl md:text-7xl font-black tracking-tighter mb-6 leading-none">
           Watch Your Idols
           <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
+          <span className="font-space text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
             Battle It Out
           </span>
         </h1>
@@ -76,9 +75,15 @@ const Home = () => {
           {FEATURED.map((f) => (
             <div
               key={f.name}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/80 border border-zinc-700/60 text-sm text-zinc-300"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/80 border border-zinc-700/60 text-sm text-zinc-300 hover:border-zinc-600 transition-colors"
             >
-              <span>{f.emoji}</span>
+              <div className="w-5 h-5 rounded-full overflow-hidden bg-zinc-700/50 flex items-center justify-center">
+                <img
+                  src={`/${f.iconNum}.svg`}
+                  alt={f.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
               <span className="font-medium">{f.name}</span>
             </div>
           ))}
@@ -109,7 +114,7 @@ const Home = () => {
             desc="Choose from 6 iconic personalities — each with a unique debate style and expertise."
           />
           <FeatureCard
-            icon="👤"
+            icon="😉"
             title="Custom Profiles"
             desc="Create up to 2 custom personas with any personality, background, and speaking style."
           />

@@ -12,7 +12,7 @@ export const useTokens = () => {
   const fetchTokens = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/user/me');
+      const res = await api.get('/profiles/user/tokens');
       setTokenData({
         tokensUsed: res.data.tokensUsed,
         tokenLimit: res.data.tokenLimit,

@@ -10,6 +10,7 @@ const UserSchema = new Schema({
   email: String,
   tokensUsed: { type: Number, default: 0 },
   tokenLimit: { type: Number, default: 1000 },
+  lastTokenResetDate: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now }
 });
 

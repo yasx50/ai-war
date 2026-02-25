@@ -50,9 +50,9 @@ const ProfileSchema = new Schema({
 });
 
 // Optional: auto-update updatedAt
-ProfileSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
-  next();
+ProfileSchema.pre("save", function(next) {
+  this.updatedAt = new Date();
+  // next();
 });
 
 export default model("Profile", ProfileSchema);

@@ -33,12 +33,12 @@ import { Pencil, Trash2, Shield, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const PRESET_META = {
-  virat_kohli:       { emoji: '🏏', color: 'from-blue-900 to-blue-700' },
-  cristiano_ronaldo: { emoji: '⚽', color: 'from-green-900 to-green-700' },
-  narendra_modi:     { emoji: '🇮🇳', color: 'from-orange-900 to-orange-700' },
-  donald_trump:      { emoji: '🦅', color: 'from-red-900 to-red-700' },
-  elon_musk:         { emoji: '🚀', color: 'from-zinc-900 to-zinc-700' },
-  sam_altman:        { emoji: '🤖', color: 'from-violet-900 to-violet-700' },
+  virat_kohli:       { iconNum: 1, color: 'from-blue-900 to-blue-700' },
+  cristiano_ronaldo: { iconNum: 2, color: 'from-green-900 to-green-700' },
+  narendra_modi:     { iconNum: 3, color: 'from-orange-900 to-orange-700' },
+  donald_trump:      { iconNum: 4, color: 'from-red-900 to-red-700' },
+  elon_musk:         { iconNum: 5, color: 'from-zinc-900 to-zinc-700' },
+  sam_altman:        { iconNum: 6, color: 'from-violet-900 to-violet-700' },
 };
 
 const ProfileCard = ({ profile, onUpdate, onDelete }) => {
@@ -97,12 +97,20 @@ const ProfileCard = ({ profile, onUpdate, onDelete }) => {
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  'w-12 h-12 rounded-xl flex items-center justify-center text-2xl',
-                  'bg-gradient-to-br shadow-lg',
+                  'w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden',
+                  'bg-gradient-to-br shadow-lg border border-zinc-700/50',
                   meta?.color || 'from-violet-900 to-pink-900'
                 )}
               >
-                {isPreset ? meta?.emoji : (profile.avatar || '👤')}
+                {isPreset ? (
+                  <img
+                    src={`/${meta?.iconNum}.svg`}
+                    alt={profile.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl">{profile.avatar || '👤'}</span>
+                )}
               </div>
               <div>
                 <h3 className="font-bold text-white text-base leading-tight">

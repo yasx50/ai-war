@@ -1,13 +1,35 @@
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Zap, AlertTriangle, XCircle } from 'lucide-react';
+import { Zap, AlertTriangle, XCircle, Clock } from 'lucide-react';
 import { useTokens } from '../hooks/useTokens';
 import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 
 const TokenCounter = ({ className, compact = false }) => {
   const { tokensUsed, tokenLimit, tokensRemaining, percentUsed, isLow, isExhausted, loading } =
     useTokens();
+  const [timeUntilReset, setTimeUntilReset] = useState('');
+
+  // Calculate time until tokens reset (midnight)
+  useEffect(() => {
+    const updateTimeUntilReset = () => {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+
+      const timeLeft = tomorrow - now;
+      const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+      const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+
+      setTimeUntilReset(`${hours}h ${minutes}m`);
+    };
+
+    updateTimeUntilReset();
+    const interval = setInterval(updateTimeUntilReset, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
 
   if (loading) {
     return (
@@ -89,11 +111,17 @@ const TokenCounter = ({ className, compact = false }) => {
         />
       </div>
 
+      {/* Reset time info */}
+      <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+        <Clock className="w-3 h-3" />
+        <span>Tokens reset in {timeUntilReset}</span>
+      </div>
+
       {isExhausted && (
         <Alert className="border-red-500/40 bg-red-500/10 text-red-300">
           <XCircle className="w-4 h-4" />
           <AlertDescription className="text-xs">
-            Token limit reached. You've used all 1000 tokens for this session.
+            Token limit reached. You've used all {tokenLimit} tokens. Reset at midnight.
           </AlertDescription>
         </Alert>
       )}
